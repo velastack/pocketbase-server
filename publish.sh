@@ -63,6 +63,28 @@ for i in "${!PACKAGES[@]}"; do
     continue
   fi
 
+  # The registry takes several minutes to process the large platform
+  # tarballs after accepting them. Publishing the meta package before they
+  # are installable would leave a window where `npm install pocketbase-server`
+  # silently skips the optional dependency and installs no binary.
+  if [[ "$pkg_name" == "pocketbase-server" ]]; then
+    echo "Waiting for the platform packages to be installable from the registry..."
+    for platform_pkg in "${PACKAGES[@]}"; do
+      [[ "$platform_pkg" == "pocketbase-server" ]] && continue
+      waited=0
+      until [[ -n "$(npm view "$platform_pkg@$pkg_version" version --prefer-online 2>/dev/null || true)" ]]; do
+        if (( waited >= 1800 )); then
+          echo "$platform_pkg@$pkg_version is still not on the registry after 30 minutes."
+          echo "Re-run to publish $pkg_name once it is."
+          exit 1
+        fi
+        sleep 15
+        waited=$((waited + 15))
+      done
+      echo "  $platform_pkg@$pkg_version is available"
+    done
+  fi
+
   echo "[$((i + 1))/${#PACKAGES[@]}] Publishing $pkg_name@$pkg_version"
   echo "Directory: $pkg_dir"
   (
