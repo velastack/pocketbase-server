@@ -1,0 +1,131 @@
+name: release
+
+# Follows velabase releases: when https://github.com/velastack/velabase has a
+# release that isn't on npm yet, downloads its binaries (update.sh), verifies
+# the packages (verify.sh), publishes all of them (publish.sh) and commits the
+# version bump. Package versions match velabase (and so PocketBase) versions.
+#
+# Publishing uses npm trusted publishing (OIDC), there is no npm token. Every
+# package has this repository + this workflow's filename (release.yaml)
+# configured as its trusted publisher on npmjs.com, so renaming this file
+# breaks publishing until that is updated (`npm trust github`).
+
+on:
+  schedule:
+    - cron: "53 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "velabase release tag to publish (default: latest stable release)"
+        type: string
+      dry_run:
+        description: "Download and verify only, don't publish or commit"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # commit the version bump
+  id-token: write # npm trusted publishing
+
+concurrency:
+  group: release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Resolve the velabase release
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ]; then
+            tag="$(gh api repos/velastack/velabase/releases/latest --jq .tag_name)"
+          fi
+          version="${tag#v}"
+          tag="v$version"
+          echo "velabase release: $tag"
+
+          # anything missing from npm, or a repo that is behind what was
+          # published (an earlier run failed half way), needs a run
+          needed=false
+          for pkg_json in pocketbase-server*/package.json; do
+            name="$(node -p "require('./$pkg_json').name")"
+            if [ -z "$(npm view "$name@$version" version 2>/dev/null || true)" ]; then
+              echo "$name@$version is not published"
+              needed=true
+            fi
+            if [ "$(node -p "require('./$pkg_json').version")" != "$version" ]; then
+              echo "$pkg_json is not at $version"
+              needed=true
+            fi
+          done
+
+          # "latest" only ever moves forward: prereleases go to "next" and
+          # backfills of older versions to "backfill"
+          current="$(npm view pocketbase-server dist-tags.latest)"
+          case "$version" in
+            *-*) dist_tag=next ;;
+            *)
+              newest="$(printf '%s\n%s\n' "$current" "$version" | sort -V | tail -n1)"
+              if [ "$newest" = "$version" ]; then dist_tag=latest; else dist_tag=backfill; fi
+              ;;
+          esac
+          echo "npm latest: $current, publishing $version as \"$dist_tag\" (needed: $needed)"
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "needed=$needed"
+            echo "dist_tag=$dist_tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Download the velabase binaries
+        if: steps.resolve.outputs.needed == 'true' || inputs.dry_run
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./update.sh "${{ steps.resolve.outputs.tag }}"
+
+      - name: Verify the packages
+        if: steps.resolve.outputs.needed == 'true' || inputs.dry_run
+        run: ./verify.sh "${{ steps.resolve.outputs.version }}"
+
+      - name: Publish to npm
+        if: steps.resolve.outputs.needed == 'true' && !inputs.dry_run
+        env:
+          NPM_DIST_TAG: ${{ steps.resolve.outputs.dist_tag }}
+        run: |
+          # trusted publishing needs npm >= 11.5.1
+          npm_version="$(npm --version)"
+          oldest="$(printf '%s\n%s\n' "$npm_version" 11.5.1 | sort -V | head -n1)"
+          [ "$oldest" = "11.5.1" ] || npm install -g npm@^11.5.1
+          ./publish.sh
+
+      # after publishing, so the repo only ever records versions that are on npm
+      - name: Commit the version bump
+        if: steps.resolve.outputs.needed == 'true' && !inputs.dry_run && github.ref == 'refs/heads/main'
+        env:
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pocketbase-server*/package.json
+          if git diff --cached --quiet; then
+            echo "package versions already committed"
+          else
+            git commit -m "velabase $TAG"
+          fi
+          if [ -z "$(git ls-remote --tags origin "refs/tags/$TAG")" ]; then
+            git tag "$TAG"
+            git push origin HEAD:main "refs/tags/$TAG"
+          else
+            git push origin HEAD:main
+          fi

@@ -16,5 +16,10 @@
   "description": "",
   "files": [
     "bin/pocketbase"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/velastack/pocketbase-server.git",
+    "directory": "pocketbase-server-linux-x64"
+  }
 }

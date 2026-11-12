@@ -26,5 +26,10 @@
   },
   "dependencies": {
     "cross-spawn": "^7.0.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/velastack/pocketbase-server.git",
+    "directory": "pocketbase-server"
   }
 }
