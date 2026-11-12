@@ -1,0 +1,20 @@
+{
+  "name": "pocketbase-server-linux-s390x",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "s390x"
+  ],
+  "version": "0.40.6",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Nathan Cahill",
+  "license": "MIT",
+  "description": "",
+  "files": [
+    "bin/pocketbase"
+  ]
+}
