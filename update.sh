@@ -41,8 +41,14 @@ for cmd in curl unzip python3; do
   fi
 done
 
+# An optional GITHUB_TOKEN avoids the anonymous API rate limit (used in CI)
+CURL_AUTH=()
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  CURL_AUTH=(-H "Authorization: Bearer $GITHUB_TOKEN")
+fi
+
 echo "Fetching release metadata from GitHub ($RELEASE_API_URL)..."
-release_json="$(curl -fsSL "$RELEASE_API_URL")"
+release_json="$(curl -fsSL ${CURL_AUTH[@]+"${CURL_AUTH[@]}"} "$RELEASE_API_URL")"
 
 # --prerelease returns a list: keep the newest non-draft release
 release_json="$(printf '%s' "$release_json" | python3 -c '

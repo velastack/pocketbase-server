@@ -2,7 +2,15 @@
 
 set -euo pipefail
 
+# Usage:
+#   ./publish.sh                    # publish under the "latest" dist-tag
+#   NPM_DIST_TAG=next ./publish.sh  # publish under another dist-tag
+#
+# Locally this prompts for npm 2FA. In GitHub Actions it authenticates with
+# npm trusted publishing (OIDC), see .github/workflows/release.yaml.
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+NPM_DIST_TAG="${NPM_DIST_TAG:-latest}"
 
 # Publish platform packages first, then the meta package.
 PACKAGES=(
@@ -26,7 +34,10 @@ for cmd in npm node; do
 done
 
 echo "Publishing ${#PACKAGES[@]} packages from: $ROOT_DIR"
-echo "npm 2FA prompts are interactive and will appear during each publish."
+echo "Dist-tag: $NPM_DIST_TAG"
+if [[ -z "${CI:-}" ]]; then
+  echo "npm 2FA prompts are interactive and will appear during each publish."
+fi
 echo
 
 for i in "${!PACKAGES[@]}"; do
@@ -56,7 +67,7 @@ for i in "${!PACKAGES[@]}"; do
   echo "Directory: $pkg_dir"
   (
     cd "$pkg_dir"
-    npm publish --tag latest
+    npm publish --tag "$NPM_DIST_TAG"
   )
   echo "Published $pkg_name@$pkg_version"
 done
