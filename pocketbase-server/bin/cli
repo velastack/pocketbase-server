@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 import spawn from "cross-spawn";
 import { getBinaryPath } from "../utils.js";
-// import pkg from './package.json' with { type: 'json' };
 
-function getArgs() {
-  const argv = process.argv;
-
-  // Find the index of the package name or cli reference
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i].includes("pocketbase-server") || argv[i].includes("cli")) {
-      return argv.slice(i + 1);
-    }
-  }
-
-  // Fallback to standard node execution
-  return argv.slice(2);
-}
-
-spawn(getBinaryPath(), getArgs(), {
+// argv is always [node, script, ...args], however the script was invoked
+const child = spawn(getBinaryPath(), process.argv.slice(2), {
   stdio: "inherit",
+});
+
+child.on("error", (err) => {
+  console.error(`Failed to start pocketbase: ${err.message}`);
+  process.exit(1);
+});
+
+// Exit the same way pocketbase did
+child.on("exit", (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+  } else {
+    process.exit(code ?? 1);
+  }
 });
