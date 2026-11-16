@@ -1,6 +1,6 @@
 {
   "name": "pocketbase-server",
-  "version": "0.42.2",
+  "version": "0.42.3",
   "main": "index.js",
   "type": "module",
   "types": "index.d.ts",
@@ -14,15 +14,15 @@
   "license": "MIT",
   "description": "",
   "optionalDependencies": {
-    "pocketbase-server-darwin-arm64": "0.42.2",
-    "pocketbase-server-darwin-x64": "0.42.2",
-    "pocketbase-server-linux-arm": "0.42.2",
-    "pocketbase-server-linux-arm64": "0.42.2",
-    "pocketbase-server-linux-ppc64": "0.42.2",
-    "pocketbase-server-linux-s390x": "0.42.2",
-    "pocketbase-server-linux-x64": "0.42.2",
-    "pocketbase-server-win32-arm64": "0.42.2",
-    "pocketbase-server-win32-x64": "0.42.2"
+    "pocketbase-server-darwin-arm64": "0.42.3",
+    "pocketbase-server-darwin-x64": "0.42.3",
+    "pocketbase-server-linux-arm": "0.42.3",
+    "pocketbase-server-linux-arm64": "0.42.3",
+    "pocketbase-server-linux-ppc64": "0.42.3",
+    "pocketbase-server-linux-s390x": "0.42.3",
+    "pocketbase-server-linux-x64": "0.42.3",
+    "pocketbase-server-win32-arm64": "0.42.3",
+    "pocketbase-server-win32-x64": "0.42.3"
   },
   "dependencies": {
     "cross-spawn": "^7.0.6"
