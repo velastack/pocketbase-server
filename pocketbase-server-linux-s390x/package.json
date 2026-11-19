@@ -6,7 +6,7 @@
   "cpu": [
     "s390x"
   ],
-  "version": "0.42.4-beta.1",
+  "version": "0.42.3",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
